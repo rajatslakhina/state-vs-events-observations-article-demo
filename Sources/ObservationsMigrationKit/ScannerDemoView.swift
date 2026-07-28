@@ -63,7 +63,7 @@ public struct ScannerDemoView: View {
         VStack(alignment: .leading, spacing: 6) {
             Text("One batch. Two truths.")
                 .font(.title2.bold())
-            Text("A batch of scans mutates the model \(batchSize) times in a single synchronous turn. Watch what each stream reports.")
+            Text("A batch of \(batchSize) scans lands in a single synchronous turn. Watch what each stream reports.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
