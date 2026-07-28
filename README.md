@@ -126,6 +126,6 @@ app lives in its own `.xcodeproj`, always.
 
 ---
 
-Article: *(link added after publish)*
+Article: **[The Combine Migration That Silently Drops 19 of Every 20 Updates](https://medium.com/@er.rajatlakhina/the-combine-migration-that-silently-drops-19-of-every-20-updates-8d327f9e2a0a)**
 
 MIT licensed — see [LICENSE](LICENSE). Built as part of an iOS + AI engineering portfolio.
