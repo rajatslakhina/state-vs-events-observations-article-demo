@@ -32,7 +32,10 @@ struct StateCoalescingTests {
 
         let seen = await consumer.value
 
-        #expect(seen.count < 20, "state emissions should be coalesced, not one-per-mutation")
+        // Observations emits an initial value on subscription, then one value
+        // per transaction — so a 20-scan synchronous batch lands as 2 emissions,
+        // not 21. See MeasurementTests for the printed counts.
+        #expect(seen.count < 20, "state emissions should be coalesced, not one-per-scan")
         #expect(seen.last?.scannedCount == 20, "final state must still be correct")
     }
 
