@@ -1,6 +1,6 @@
 # State vs. Events — what `Observations` actually replaces
 
-A small, runnable demo for the article **“Combine Is Over. The Migration Everyone Is About to Get Wrong.”**
+A small, runnable demo for the article **“The Combine Migration That Silently Drops 19 of Every 20 Updates.”**
 
 `Observations` (SE-0475, Swift 6.2 / iOS 26) turns an `@Observable` model into an `AsyncSequence`. It is
 transactional: it opens a transaction at the first `willSet` and emits **once** at the next point of
@@ -8,7 +8,7 @@ consistency. That is exactly right for state and exactly wrong for events.
 
 This repo makes the difference measurable instead of arguable.
 
-![One synchronous batch, two transports: an @Observable ScannerModel is mutated twenty times in a single run-loop turn. The Observations state stream delivers two values — the initial snapshot and the final one — and eighteen intermediates are gone. The AsyncStream event channel delivers all twenty values in order with a dropped count of zero. The rule at the bottom reads: if losing an intermediate value would be a bug, it is an event, not state.](Demo/Screenshots/state-vs-events-diagram.png)
+![One synchronous batch, two transports: an @Observable ScannerModel is mutated twenty times in a single run-loop turn. The Observations state stream delivers two values — the initial snapshot and the final one — and nineteen intermediates are gone. The AsyncStream event channel delivers all twenty values in order with a dropped count of zero. The rule at the bottom reads: if losing an intermediate value would be a bug, it is an event, not state.](Demo/Screenshots/state-vs-events-diagram.png)
 
 ---
 
@@ -43,12 +43,19 @@ for await snapshot in StateStream.snapshots(of: model) { ... }
 for await event in model.scanEvents() { ... }
 ```
 
-Measured across three identical runs on Swift 6.2:
+`swift test` prints the measurement on every run:
+
+```
+MEASURED — scans: 20 · state emissions: 2 · events delivered: 20 · events dropped: 0
+```
 
 | Transport | Values delivered |
 |---|---|
-| `Observations { model.snapshot }` | **2** (initial + final) |
+| `Observations { model.snapshot }` | **2** — the initial value on subscription, then one coalesced transaction for the whole batch |
 | `AsyncStream` via `EventChannel` | **20**, in order, `droppedCount == 0` |
+
+Nineteen intermediate states never reached the consumer. That is nineteen values you
+would still have received from a `@Published` property and a `sink`.
 
 `isImporting` flips `true` and back to `false` inside that same turn. The state stream never sees `true`.
 That is not a bug in `Observations` — it is the definition of transactional.
@@ -58,15 +65,26 @@ That is not a bug in `Observations` — it is the definition of transactional.
 ## Verification status — read this part
 
 **What was actually verified:** `swift build` and `swift test` were run on a real Swift 6.2 toolchain
-(Linux, aarch64). All 11 tests pass, including the coalescing test and the bounded-buffer edge cases.
+(Linux, aarch64). All 12 tests pass, including the coalescing test, the measurement test, and the
+bounded-buffer edge cases.
 
-![Terminal output of swift test for this package on Swift 6.2, showing eleven passing tests across two suites and zero failures, including the coalescing test and the bounded-buffer overflow tests.](Demo/Screenshots/swift-test-output.png)
+![Output of swift test for this package on Swift 6.2, re-typeset for legibility: twelve passing tests across three suites, zero failures, and the measurement line reading twenty scans, two state emissions, twenty events delivered, zero events dropped.](Demo/Screenshots/swift-test-output.png)
 
-**What was not verified:** the `Demo.xcodeproj` app was **not** launched on the iOS Simulator for this
-commit, and there is no Simulator screenshot in this repo. The run that produced it was an unattended
-scheduled job, and macOS screen control cannot be approved while nobody is at the keyboard. Rather than
-ship a mockup captioned as a screenshot, the gap is stated here. The SwiftUI layer got a line-by-line
-review instead: no force-unwraps, no unchecked collection access, all list-free numeric rendering, and
+*(That card is the real run's output, re-typeset so it stays readable at article width — not a
+terminal screenshot. Run `swift test` yourself and you get the same numbers.)*
+
+**What was not verified:** two things, precisely.
+
+1. `Sources/ObservationsMigrationKit/ScannerDemoView.swift` was **never compiled**. It sits behind
+   `#if canImport(SwiftUI)`, so the Linux build skips it entirely — `swift build` succeeding says
+   nothing about it.
+2. The `Demo.xcodeproj` app was **not** launched on the iOS Simulator, and there is no Simulator
+   screenshot in this repo.
+
+The reason for both: the run that produced this repo was an unattended scheduled job, and macOS screen
+control cannot be approved with nobody at the keyboard. Rather than ship a rendered mockup captioned as
+a screenshot, the gap is stated here. The SwiftUI layer got a line-by-line review in place of a
+compile: no force-unwraps, no unchecked collection access, no index-based list rendering, and
 `project.pbxproj` brace/paren balance checked programmatically.
 
 If you clone this and run it, the two counters on screen are the whole argument.
@@ -78,7 +96,7 @@ If you clone this and run it, the two counters on screen are the whole argument.
 ```bash
 git clone https://github.com/rajatslakhina/state-vs-events-observations-article-demo.git
 cd state-vs-events-observations-article-demo
-swift test                 # 11 tests, headless, no Xcode needed
+swift test                 # 12 tests, headless, no Xcode needed
 open Demo.xcodeproj        # pick any iOS 26 Simulator, then Build & Run
 ```
 
@@ -97,7 +115,7 @@ Requirements: Xcode 26 or later (iOS 26 deployment target), Swift 6.2.
 | `Sources/ObservationsMigrationKit/StateStream.swift` | the `Observations` wrapper — the state side |
 | `Sources/ObservationsMigrationKit/EventChannel.swift` | bounded, policy-named, drop-counting event side |
 | `Sources/ObservationsMigrationKit/ScannerDemoView.swift` | SwiftUI screen showing both counters live |
-| `Tests/` | 11 tests, including the coalescing proof and buffer-overflow edge cases |
+| `Tests/` | 12 tests: the coalescing proof, the printed measurement, and buffer-overflow edge cases |
 | `Demo/` + `Demo.xcodeproj` | the runnable app target |
 
 Note on `Package.swift`: the package declares a **library only**. There is deliberately no
@@ -108,6 +126,6 @@ app lives in its own `.xcodeproj`, always.
 
 ---
 
-Article: *(added after publish — see the link at the top of this README once it is live)*
+Article: *(link added after publish)*
 
-MIT licensed. Built as part of an iOS + AI engineering portfolio.
+MIT licensed — see [LICENSE](LICENSE). Built as part of an iOS + AI engineering portfolio.
