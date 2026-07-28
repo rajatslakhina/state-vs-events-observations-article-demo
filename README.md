@@ -8,13 +8,13 @@ consistency. That is exactly right for state and exactly wrong for events.
 
 This repo makes the difference measurable instead of arguable.
 
-![One synchronous batch, two transports: an @Observable ScannerModel is mutated twenty times in a single run-loop turn. The Observations state stream delivers two values — the initial snapshot and the final one — and nineteen intermediates are gone. The AsyncStream event channel delivers all twenty values in order with a dropped count of zero. The rule at the bottom reads: if losing an intermediate value would be a bug, it is an event, not state.](Demo/Screenshots/state-vs-events-diagram.png)
+![One synchronous batch, two transports. An @Observable ScannerModel records twenty scans in a single run-loop turn. The Observations state stream delivers two values — the initial value, then one coalesced transaction for the whole batch — and nineteen intermediate states are gone. The AsyncStream event channel delivers all twenty values in order with a dropped count of zero. The rule at the bottom reads: if losing an intermediate value would be a bug, it is an event, not state.](Demo/Screenshots/state-vs-events-diagram.png)
 
 ---
 
 ## The measured result
 
-`importBatch` mutates the model 20 times inside one synchronous turn — no `await` anywhere in the loop:
+`importBatch` records 20 scans inside one synchronous turn — no `await` anywhere in the loop:
 
 ```swift
 @discardableResult
